@@ -1,4 +1,4 @@
-terraform {
+/* terraform {
   backend "s3" {
     bucket  = "sisoitherembo-terraform-state-bucket"
     key     = "dev/data-storage/terraform.tfstate"
@@ -8,7 +8,8 @@ terraform {
     encrypt = true
   }
 }
-
+ */
+ 
 provider "aws" {
   region = var.region
 }

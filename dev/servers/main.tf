@@ -53,7 +53,7 @@ resource "aws_instance" "private_server" {
   user_data = data.template_file.user_date.rendered
 
   tags = {
-    "Name" = "private_server_terraform"
+    "Name" = "${var.vpc_environment}-private_server_terraform"
   }
 }
 
@@ -72,6 +72,6 @@ resource "aws_instance" "bastion_server" {
   user_data               = data.template_file.user_date.rendered
 
   tags = {
-    "Name" = "bastion_server_terraform"
+    "Name" = "${var.vpc_environment}-bastion_server_terraform"
   }
 }
