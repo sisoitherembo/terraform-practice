@@ -1,9 +1,9 @@
-output "MySQL_address" {
+output "address" {
     description = "The IP address of the DB instance"
     value = aws_db_instance.mysql_db.address
 }
 
-output "MySQL_port" {
+output "port" {
   description = "Port of the DB instance"
   value = aws_db_instance.mysql_db.port
 }

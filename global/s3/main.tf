@@ -45,10 +45,3 @@ resource "aws_dynamodb_table" "terraform_locks" {
     type = "S"
   } 
 }
-
-
-/* 
-resource "aws_instance" "EC2_server" {
-    ami             = "ami-052efd3df9dad4825"
-    instance_type   = "t2.micro"
-} */
