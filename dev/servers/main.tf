@@ -38,19 +38,19 @@ provider "aws" {
   region = var.provider_region
 }
 
-
 resource "aws_instance" "private_server" {
   ami                     = data.aws_ami.ubuntu-linux.id
   instance_type           = var.ec2_instance_type
   vpc_security_group_ids  = [ module.networking.security_group_id ]
-  subnet_id               =  module.networking.private_subnet_id 
+  subnet_id               = module.networking.private_subnet_ids[0] 
+  key_name                = var.ec2_key_pair_name
 
   depends_on = [
     module.networking,
     module.database
   ]
 
-  user_data = data.template_file.user_date.rendered
+  user_data = data.template_file.user_data.rendered
 
   tags = {
     "Name" = "${var.vpc_environment}-private_server_terraform"
@@ -62,14 +62,15 @@ resource "aws_instance" "bastion_server" {
   ami                     = data.aws_ami.ubuntu-linux.id
   instance_type           = var.ec2_instance_type
   vpc_security_group_ids  = [ module.networking.security_group_id ]
-  subnet_id               =  module.networking.public_subnet_id 
-  
+  subnet_id               = module.networking.public_subnet_ids[0] 
+  key_name                = var.ec2_key_pair_name
+
   depends_on = [ 
     module.networking,
     module.database
   ]
 
-  user_data               = data.template_file.user_date.rendered
+  user_data               = data.template_file.user_data.rendered
 
   tags = {
     "Name" = "${var.vpc_environment}-bastion_server_terraform"

@@ -13,7 +13,9 @@ variable "ec2_ami" {
   default = "ami-052efd3df9dad4825"
 }
 
-
+variable "ec2_key_pair_name" {
+  default = "sisoi-key-pair2"
+}
 /***************************PROVIDER CONFIGURATION********************************/
 variable "provider_region" {
   default = "us-east-2"

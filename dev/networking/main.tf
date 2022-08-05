@@ -18,7 +18,7 @@ resource "aws_vpc" "vpc" {
 resource "aws_internet_gateway" "ig" {
   vpc_id = "${aws_vpc.vpc.id}"
   tags = {
-    Name        = "${var.environment}-igw"
+    Name        = "${var.environment}-bastion-igw"
     Environment = "${var.environment}"
   }
 }
@@ -32,8 +32,9 @@ resource "aws_nat_gateway" "nat" {
   allocation_id = "${aws_eip.nat_eip.id}"
   subnet_id     = "${element(aws_subnet.public_subnet.*.id, 0)}"
   depends_on    = [aws_internet_gateway.ig]
+  
   tags = {
-    Name        = "nat"
+    Name        = "${var.environment}-private-nat"
     Environment = "${var.environment}"
   }
 }
@@ -44,8 +45,9 @@ resource "aws_subnet" "public_subnet" {
   cidr_block              = "${element(var.public_subnets_cidr,   count.index)}"
   availability_zone       = "${element(var.availability_zones,   count.index)}"
   map_public_ip_on_launch = true
+
   tags = {
-    Name        = "${var.environment}-${element(var.availability_zones, count.index)}-      public-subnet"
+    Name        = "${var.environment}-${element(var.availability_zones, count.index)}-public-subnet"
     Environment = "${var.environment}"
   }
 }
@@ -56,14 +58,17 @@ resource "aws_subnet" "private_subnet" {
   cidr_block              = "${element(var.private_subnets_cidr, count.index)}"
   availability_zone       = "${element(var.availability_zones,   count.index)}"
   map_public_ip_on_launch = false
+
   tags = {
     Name        = "${var.environment}-${element(var.availability_zones, count.index)}-private-subnet"
     Environment = "${var.environment}"
   }
 }
+
 /* Routing table for private subnet */
 resource "aws_route_table" "private" {
   vpc_id = "${aws_vpc.vpc.id}"
+
   tags = {
     Name        = "${var.environment}-private-route-table"
     Environment = "${var.environment}"
@@ -72,52 +77,78 @@ resource "aws_route_table" "private" {
 /* Routing table for public subnet */
 resource "aws_route_table" "public" {
   vpc_id = "${aws_vpc.vpc.id}"
+
   tags = {
     Name        = "${var.environment}-public-route-table"
     Environment = "${var.environment}"
   }
 }
-resource "aws_route" "public_internet_gateway" {
-  route_table_id         = "${aws_route_table.public.id}"
-  destination_cidr_block = "0.0.0.0/0"
-  gateway_id             = "${aws_internet_gateway.ig.id}"
-}
-resource "aws_route" "private_nat_gateway" {
-  route_table_id         = "${aws_route_table.private.id}"
-  destination_cidr_block = "0.0.0.0/0"
-  nat_gateway_id         = "${aws_nat_gateway.nat.id}"
-}
+
+
 /* Route table associations */
 resource "aws_route_table_association" "public" {
   count          = "${length(var.public_subnets_cidr)}"
   subnet_id      = "${element(aws_subnet.public_subnet.*.id, count.index)}"
   route_table_id = "${aws_route_table.public.id}"
 }
+
 resource "aws_route_table_association" "private" {
   count          = "${length(var.private_subnets_cidr)}"
   subnet_id      = "${element(aws_subnet.private_subnet.*.id, count.index)}"
   route_table_id = "${aws_route_table.private.id}"
 }
+
+resource "aws_route" "public_internet_gateway" {
+  route_table_id         = "${aws_route_table.public.id}"
+  destination_cidr_block = "0.0.0.0/0"
+  gateway_id             = "${aws_internet_gateway.ig.id}"
+}
+
+resource "aws_route" "private_nat_gateway" {
+  route_table_id         = "${aws_route_table.private.id}"
+  destination_cidr_block = "0.0.0.0/0"
+  nat_gateway_id         = "${aws_nat_gateway.nat.id}"
+}
+
 /*==== VPC's Default Security Group ======*/
 resource "aws_security_group" "default" {
-  name        = "${var.environment}-default-sg"
   description = "Default security group to allow inbound/outbound from the VPC"
+  name        = "${var.environment}-default-sg"
   vpc_id      = "${aws_vpc.vpc.id}"
   depends_on  = [aws_vpc.vpc]
-  ingress {
-    from_port   = "0"
-    to_port     = "0"
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  
-  egress {
-    from_port   = "0"
-    to_port     = "0"
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+
   tags = {
+    Name        = "${var.environment}-default-sg"
     Environment = "${var.environment}"
   }
+}
+
+resource "aws_security_group_rule" "ingress_allow_http" {
+  type              = "ingress"
+  security_group_id = aws_security_group.default.id
+
+  from_port   = local.http_port
+  to_port     = local.http_port
+  protocol    = local.tcp_protocol
+  cidr_blocks = local.any_cidr
+}
+
+resource "aws_security_group_rule" "ingress_allow_ssh" {
+  type              = "ingress"
+  security_group_id = aws_security_group.default.id
+
+  from_port   = local.ssh_port
+  to_port     = local.ssh_port
+  protocol    = local.tcp_protocol
+  cidr_blocks = local.any_cidr
+}
+
+resource "aws_security_group_rule" "egress_allow_all" {
+  type              = "egress"
+  security_group_id = aws_security_group.default.id
+
+  from_port   = local.any_port
+  to_port     = local.any_port
+  protocol    = local.any_protocol
+  cidr_blocks = local.any_cidr
 }

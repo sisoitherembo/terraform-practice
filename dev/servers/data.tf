@@ -1,5 +1,6 @@
-data "template_file" "user_date"{
-    template = file("user-data.sh")
+
+data "template_file" "user_data"{
+    template = file("${path.module}/user-data.sh")
 
     vars = {
         server_port  = var.ec2_server_port
@@ -8,7 +9,7 @@ data "template_file" "user_date"{
     }
 }
 
-
+# Getting linux image
 data "aws_ami" "ubuntu-linux" {
   most_recent = true
   owners      = ["099720109477"] # Canonical
